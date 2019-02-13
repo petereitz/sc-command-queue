@@ -1,0 +1,14 @@
+{
+  "name": "sc-command-queue",
+  "version": "1.0.0",
+  "description": "Queue command events Connectwise Control (Screenconnect) guest systems.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "petereitz",
+  "license": "MIT",
+  "dependencies": {
+    "request": "^2.88.0"
+  }
+}
