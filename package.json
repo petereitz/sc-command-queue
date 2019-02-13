@@ -10,5 +10,9 @@
   "license": "MIT",
   "dependencies": {
     "request": "^2.88.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/petereitz/sc-command-queue"
   }
 }

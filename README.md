@@ -4,7 +4,9 @@ Queue command events Connectwise Control (Screen Connect) guest systems.
 
 ## Install
 
-  $ npm install sc-command-queue
+```
+  npm install sc-command-queue
+```
 
 ## Quick Start
 
