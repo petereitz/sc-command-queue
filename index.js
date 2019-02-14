@@ -31,6 +31,8 @@ Queue.prototype.connect = function (urlBase, user, key) {
       // save the url base
       if(!urlBase){
         reject("connect expects urlBase with call")
+        //console.log("connect() expects urlBase with call");
+        //return({status: false, message: "connect expects urlBase with call"});
       } else if (urlBase.slice(-1) == "/"){
         urlBase = urlBase.slice(0,-1);
       }
@@ -44,6 +46,8 @@ Queue.prototype.connect = function (urlBase, user, key) {
         self.conn.user = user;
       } else {
         reject("connect expects user with call")
+        //console.log("connect() expects user with call");
+        //return({status: false, message: "connect() expects user with call"});
       }
 
       // save the key
@@ -51,6 +55,8 @@ Queue.prototype.connect = function (urlBase, user, key) {
         self.conn.key = key;
       } else {
         reject("connect expects key with call")
+        //console.log("connect() expects key with call");
+        //return({status: false, message: "connect() expects key with call"});
       }
 
       // test connectivity to the api
@@ -63,6 +69,8 @@ Queue.prototype.connect = function (urlBase, user, key) {
       }, function(err, res, body){
         if (err) {
           reject(err);
+          //console.log(err);
+          //return({status: false, message: err});
         } else {
 
           // did we get a valid response
@@ -73,14 +81,21 @@ Queue.prototype.connect = function (urlBase, user, key) {
             // note when we did this
             self.conn.lastConn = Date.now();
 
+            // set connected to true
+            self.conn.state = true;
+
             // return the api info title and version
             resolve(`${body.info.title}:${body.info.version}`);
+            //return({status: true, message: `${body.info.title}:${body.info.version}`});
+
           }
         }
       });
 
     } catch(err) {
       reject(err);
+      //console.log(err);
+      //return({status: false, message: err});
     }
   });
 }
@@ -167,53 +182,64 @@ Queue.prototype.command = function (session, command, opts = {preflight: true}) 
 
     try{
 
-      // review options
-      // preflight checks that the host is connected before issuing commands
-      if (!opts.hasOwnProperty('preflight') || typeof opts.preflight != "boolean"){
-        // if we got something ugly or nothing for preflight then set it to true
-        opts.preflight = true;
+      // ensure that the api connect is complete
+      if (!self.conn.hasOwnProperty('state') || !self.conn.state){
+        setTimeout(function(){
+          //t
+          console.log('tick');
+
+          self.command(session, command, opts)
+            .then(result => resolve(result));
+        }, 500);
+      } else {
+
+        // review options
+        // preflight checks that the host is connected before issuing commands
+        if (!opts.hasOwnProperty('preflight') || typeof opts.preflight != "boolean"){
+          // if we got something ugly or nothing for preflight then set it to true
+          opts.preflight = true;
+        }
+        // default group to work With
+        if (!opts.hasOwnProperty('group')){
+          opts.group = api.defaultGroup;
+        }
+
+        // start with the preflight
+        self.preflightCheck(session, opts.preflight)
+          .then(preflight => {
+            // build the url
+            let url = `${self.conn.urlBase}${api.addEventToSessions}`;
+            // build the payload
+            let payload = [opts.group, [session], 44, command]
+
+            // if preflight is good then queue the command
+            if (preflight){
+              request.post(url, {
+                'auth': {
+                  'user': self.conn.user,
+                  'pass': self.conn.key,
+                  'sendImmediately': false
+                },
+                json: payload
+              }, function(err, res, body){
+                if (err){
+                  reject(err);
+                } else if (res.statusCode != 200){
+                  reject(`Error: ${JSON.stringify(body)}`)
+                } else {
+                  resolve({status: "success", message: body});
+                }
+              })
+            } else {
+              // return "command not queued"
+              resolve({status: "failure", message: "Preflight failed.  Command not queued"});
+            }
+
+          })
+          .catch(err => {
+            reject(err);
+          })
       }
-      // default group to work With
-      if (!opts.hasOwnProperty('group')){
-        opts.group = api.defaultGroup;
-      }
-
-      // start with the preflight
-      self.preflightCheck(session, opts.preflight)
-        .then(preflight => {
-          // build the url
-          let url = `${self.conn.urlBase}${api.addEventToSessions}`;
-          // build the payload
-          let payload = [opts.group, [session], 44, command]
-
-          // if preflight is good then queue the command
-          if (preflight){
-            request.post(url, {
-              'auth': {
-                'user': self.conn.user,
-                'pass': self.conn.key,
-                'sendImmediately': false
-              },
-              json: payload
-            }, function(err, res, body){
-              if (err){
-                reject(err);
-              } else if (res.statusCode != 200){
-                reject(`Error: ${JSON.stringify(body)}`)
-              } else {
-                resolve({status: "success", message: res});
-              }
-            })
-          } else {
-            // return "command not queued"
-            resolve({status: "failure", message: "Preflight failed.  Command not queued"});
-          }
-
-        })
-        .catch(err => {
-          reject(err);
-        })
-
     } catch(err) {
       reject(err);
     }

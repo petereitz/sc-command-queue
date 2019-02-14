@@ -14,10 +14,14 @@ Queue command events Connectwise Control (Screen Connect) guest systems.
 const queue = require('sc-command-queue');
 
 // connect to the api
-queue.connect("https://example.com", <username>, <password>);
+queue.connect("https://example.com", <username>, <password>)
+  .then(status => console.log(status))
+  .catch(err => console.log(err));
 
 // send a command
-queue.command(<session-id>, <command>, {group: <group>});
+queue.command(<session-id>, <command>, {group: <group>})
+  .then(status => console.log(res))
+  .catch(err => console.log(err));
 ```
 
 ## Usage
@@ -26,13 +30,19 @@ Once required, connect to a Screen Connect server using the `connect()` method. 
 
 ## Methods
 
-- `connect(<api-location>, <user>, <password>)` - Takes the protocol and fqdn of your server (eg: `https://myServer.com`) as well as an authorized set of user credentials.  An attempt is made to connect `GET` `openapidocument.axd`.  If successful the app returns the ScreenConnect version number and `false` otherwise.
-- `command(<sessionID>, <command>, <options>)` - Queues a command for the guest system to execute.
+- `connect(<api-location>, <user>, <password>)` - Takes the protocol and fqdn of your server (eg: `https://myServer.com`) as well as an authorized set of user credentials.  An attempt is made to connect `GET` `openapidocument.axd`.  If successful the app returns the ScreenConnect version number and `false` otherwise.  
+- `command(<sessionID>, <command>, <options>)` - Queues a command for the guest system to execute. Waits for `connect()` to complete.
   - **sessionID** - Session ID of the guest system.
   - **command** - Escaped command string
   - **options**
     - **preflight** - `boolean`: verify that a guest is connected prior.  Defaults to `true`.
     - **group** -  `string`: the group that the guest belongs to.  Defaults to "All Machines".
+
+## Changes
+
+- **v1.0.1** - Add wait-for-connect logic to `command()`.
+- **v1.0.0** - Initial
+
 
 ## License
 
