@@ -20,7 +20,7 @@ queue.connect("https://example.com", <username>, <password>)
 
 // send a command
 queue.command(<session-id>, <command>, {group: <group>})
-  .then(status => console.log(res))
+  .then(res => console.log(res))
   .catch(err => console.log(err));
 ```
 
