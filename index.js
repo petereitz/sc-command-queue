@@ -1,4 +1,4 @@
-// index.js
+ // index.js
 
 // ---SETUP---
 const request = require('request');
@@ -30,9 +30,7 @@ Queue.prototype.connect = function (urlBase, user, key) {
 
       // save the url base
       if(!urlBase){
-        reject("connect expects urlBase with call")
-        //console.log("connect() expects urlBase with call");
-        //return({status: false, message: "connect expects urlBase with call"});
+        reject("connect() expects urlBase with call")
       } else if (urlBase.slice(-1) == "/"){
         urlBase = urlBase.slice(0,-1);
       }
@@ -45,18 +43,14 @@ Queue.prototype.connect = function (urlBase, user, key) {
       if (user){
         self.conn.user = user;
       } else {
-        reject("connect expects user with call")
-        //console.log("connect() expects user with call");
-        //return({status: false, message: "connect() expects user with call"});
+        reject("connect() expects user with call")
       }
 
       // save the key
       if (key){
         self.conn.key = key;
       } else {
-        reject("connect expects key with call")
-        //console.log("connect() expects key with call");
-        //return({status: false, message: "connect() expects key with call"});
+        reject("connect() expects key with call")
       }
 
       // test connectivity to the api
@@ -69,8 +63,6 @@ Queue.prototype.connect = function (urlBase, user, key) {
       }, function(err, res, body){
         if (err) {
           reject(err);
-          //console.log(err);
-          //return({status: false, message: err});
         } else {
 
           // did we get a valid response
@@ -84,97 +76,21 @@ Queue.prototype.connect = function (urlBase, user, key) {
             // set connected to true
             self.conn.state = true;
 
-            // return the api info title and version
+            // resolve
             resolve(`${body.info.title}:${body.info.version}`);
-            //return({status: true, message: `${body.info.title}:${body.info.version}`});
-
           }
         }
       });
 
     } catch(err) {
       reject(err);
-      //console.log(err);
-      //return({status: false, message: err});
     }
   });
 }
 
-// preflight check
-Queue.prototype.preflightCheck = function (session, preflight) {
-  return new Promise((resolve, reject)=>{
-
-    // don't loose yourself
-    const self = this;
-
-    try{
-      // bypass preflight?
-      if (!preflight){
-        resolve(true);
-      }
-
-      // build the url
-      let url = `${self.conn.urlBase}${api.guestSessionInfo}`
-
-      // do a lookup to see if the host is online
-      request.get(url, {
-        'auth': {
-          'user': self.conn.user,
-          'pass': self.conn.key,
-          'sendImmediately': false
-        },
-        qs: {sessionIDs: session}
-      }, function(err, res, body){
-        if (err) {
-          reject(err);
-        } else {
-
-          // t
-          //console.log(res)
-
-          // did we get a valid response?
-          if (res.statusCode == 200){
-
-            // clean up that body
-            body = JSON.parse(body)
-
-            // did we get a list back with exactly one session??
-            if (body.hasOwnProperty("Sessions") && 2 > body.Sessions.length > 0 ){
-
-              // verify that this is an access session
-              let session = body.Sessions[0];
-              if (session.hasOwnProperty("SessionType") && session.SessionType == 2){
-                // check for an active connection from a guest system
-                if(session.hasOwnProperty("ActiveConnections") && session.ActiveConnections.length > 0){
-                  let guestIsActive = session.ActiveConnections.some(function(conn){
-                    if(conn.ProcessType == 2){
-                      return true;
-                    }
-                  });
-                  // return findings
-                  resolve(guestIsActive);
-                } else {
-                  // no active connections
-                  resolve(false);
-                }
-              } else {
-                reject({message: `preflightCheck() for sessionID: ${session} failed as this is a non-access session`})
-              }
-            } else {
-              // something's up, reject it
-              reject({message: `preflightCheck() for sessionID: ${session} returned ${body.Sessions.length} sessions.  There should only be 1`})
-            }
-          }
-        }
-      });
-    } catch(err) {
-      reject(err);
-    }
-  });
-}
 
 // Queue a command for a given host
-Queue.prototype.command = function (session, command, opts = {preflight: true}) {
+Queue.prototype.command = function (session, command, opts = {group: api.defaultGroup}) {
   return new Promise((resolve, reject)=>{
 
     // don't loose yourself
@@ -182,63 +98,45 @@ Queue.prototype.command = function (session, command, opts = {preflight: true}) 
 
     try{
 
-      // ensure that the api connect is complete
+      // ensure that the api connect() is complete
       if (!self.conn.hasOwnProperty('state') || !self.conn.state){
         setTimeout(function(){
-          //t
-          console.log('tick');
-
+          // retry
           self.command(session, command, opts)
             .then(result => resolve(result));
         }, 500);
       } else {
 
-        // review options
-        // preflight checks that the host is connected before issuing commands
-        if (!opts.hasOwnProperty('preflight') || typeof opts.preflight != "boolean"){
-          // if we got something ugly or nothing for preflight then set it to true
-          opts.preflight = true;
-        }
-        // default group to work With
-        if (!opts.hasOwnProperty('group')){
-          opts.group = api.defaultGroup;
+        // we want to pass an array of sessionIDs, even if we only got one
+        let sessions = [];
+        if (Array.isArray(session)){
+          sessions = session;
+        } else {
+          sessions = [session];
         }
 
-        // start with the preflight
-        self.preflightCheck(session, opts.preflight)
-          .then(preflight => {
-            // build the url
-            let url = `${self.conn.urlBase}${api.addEventToSessions}`;
-            // build the payload
-            let payload = [opts.group, [session], 44, command]
+        // build the url
+        let url = `${self.conn.urlBase}${api.addEventToSessions}`;
+        // build the payload
+        let payload = [opts.group, sessions, 44, command]
 
-            // if preflight is good then queue the command
-            if (preflight){
-              request.post(url, {
-                'auth': {
-                  'user': self.conn.user,
-                  'pass': self.conn.key,
-                  'sendImmediately': false
-                },
-                json: payload
-              }, function(err, res, body){
-                if (err){
-                  reject(err);
-                } else if (res.statusCode != 200){
-                  reject(`Error: ${JSON.stringify(body)}`)
-                } else {
-                  resolve({status: "success", message: body});
-                }
-              })
-            } else {
-              // return "command not queued"
-              resolve({status: "failure", message: "Preflight failed.  Command not queued"});
-            }
-
-          })
-          .catch(err => {
+        // POST the reqeust
+        request.post(url, {
+          'auth': {
+            'user': self.conn.user,
+            'pass': self.conn.key,
+            'sendImmediately': false
+          },
+          json: payload
+        }, function(err, res, body){
+          if (err){
             reject(err);
-          })
+          } else if (res.statusCode != 200){
+            reject(`Error: ${JSON.stringify(body)}`)
+          } else {
+            resolve({status: "success", message: body});
+          }
+        })
       }
     } catch(err) {
       reject(err);
