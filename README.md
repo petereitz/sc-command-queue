@@ -31,17 +31,16 @@ Once required, connect to a Screen Connect server using the `connect()` method. 
 ## Methods
 
 - `connect(<api-location>, <user>, <password>)` - Takes the protocol and fqdn of your server (eg: `https://myServer.com`) as well as an authorized set of user credentials.  An attempt is made to connect `GET` `openapidocument.axd`.  If successful the app returns the ScreenConnect version number and `false` otherwise.  
-- `command(<sessionID>, <command>, <options>)` - Queues a command for the guest system to execute. Waits for `connect()` to complete.
-  - **sessionID** - Session ID of the guest system.
+- `command(<sessions>, <command>, <options>)` - Queues a command for the guest sessions to execute. Waits for `connect()` to complete.
+  - **sessions** - An array of guest system Session IDs.
   - **command** - Escaped command string
   - **options**
-    - **preflight** - `boolean`: verify that a guest is connected prior.  Defaults to `true`.
     - **group** -  `string`: the group that the guest belongs to.  Defaults to "All Machines".
 
 ## Changes
 - **v1.1.0**
   - Removed `preflight()` as per-guest connect check can spike the processor for requests against large groups of systems.
-    - Allow for SessionIDs to be passed as an array.
+  - `command()` now called with an array of session IDs be passed to ScreenConnect.  If called with a single session ID, it will be converted to an array
 
 - **v1.0.1**
   - Add wait-for-connect logic to `command()`.

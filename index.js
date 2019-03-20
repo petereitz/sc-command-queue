@@ -90,7 +90,7 @@ Queue.prototype.connect = function (urlBase, user, key) {
 
 
 // Queue a command for a given host
-Queue.prototype.command = function (session, command, opts = {group: api.defaultGroup}) {
+Queue.prototype.command = function (sessions, command, opts = {group: api.defaultGroup}) {
   return new Promise((resolve, reject)=>{
 
     // don't loose yourself
@@ -102,17 +102,16 @@ Queue.prototype.command = function (session, command, opts = {group: api.default
       if (!self.conn.hasOwnProperty('state') || !self.conn.state){
         setTimeout(function(){
           // retry
-          self.command(session, command, opts)
+          self.command(sessions, command, opts)
             .then(result => resolve(result));
         }, 500);
       } else {
 
         // we want to pass an array of sessionIDs, even if we only got one
-        let sessions = [];
-        if (Array.isArray(session)){
-          sessions = session;
+        if (Array.isArray(sessions)){
+          sessions = sessions;
         } else {
-          sessions = [session];
+          sessions = [sessions];
         }
 
         // build the url
