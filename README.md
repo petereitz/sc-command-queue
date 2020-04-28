@@ -38,6 +38,9 @@ Once required, connect to a Screen Connect server using the `connect()` method. 
     - **group** -  `string`: the group that the guest belongs to.  Defaults to "All Machines".
 
 ## Changes
+- **v1.2.0**
+  - Add `createSession` method
+
 - **v1.1.0**
   - Removed `preflight()` as per-guest connect check can spike the processor for requests against large groups of systems.
   - `command()` now called with an array of session IDs be passed to ScreenConnect.  If called with a single session ID, it will be converted to an array
