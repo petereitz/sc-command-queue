@@ -8,7 +8,8 @@ const api = {
   defaultGroup: "All Machines",
   testPath: "/openapidocument.axd",
   addEventToSessions: "/Services/PageService.ashx/event-to-sessions",
-  guestSessionInfo: "/Services/PageService.ashx/guest-session-info"
+  guestSessionInfo: "/Services/PageService.ashx/guest-session-info",
+  createSession: "/Services/PageService.ashx/CreateSession"
 }
 
 
@@ -134,6 +135,76 @@ Queue.prototype.command = function (sessions, command, opts = {group: api.defaul
             reject(`Error: ${JSON.stringify(body)}`)
           } else {
             resolve({status: "success", message: body});
+          }
+        })
+      }
+    } catch(err) {
+      reject(err);
+    }
+  });
+}
+
+// Create a session
+Queue.prototype.createSession = function (type, name) {
+  return new Promise((resolve, reject)=>{
+
+    // don't loose yourself
+    const self = this;
+
+    try{
+
+      // ensure that the api connect() is complete
+      if (!self.conn.hasOwnProperty('state') || !self.conn.state){
+        setTimeout(function(){
+          // retry
+          self.createSession(type, name)
+            .then(result => resolve(result));
+        }, 500);
+      } else {
+
+        // build the request body
+        let deets = [];
+        // what type of support session are we looking for?
+        if(type == "support"){
+          deets.push(0);
+        } else {
+          // we really only do support sessions
+          deets.push(0);
+        }
+        // the name
+        deets.push(name);
+        // this is a public session
+        deets.push(true);
+        // we need an access code
+        let accessCode = Math.floor(Math.random()*90000) + 10000;
+        deets.push(`${accessCode}`);
+        // and we never have opts to add
+        deets.push(null);
+
+        // build the url
+        let url = `${self.conn.urlBase}${api.createSession}`;
+
+        // POST the reqeust
+        request.post(url, {
+          'auth': {
+            'user': self.conn.user,
+            'pass': self.conn.key,
+            'sendImmediately': false
+          },
+          json: deets
+        }, function(err, res, body){
+          if (err){
+            reject(err);
+          } else if (res.statusCode != 200){
+            reject(`Error: ${JSON.stringify(body)}`)
+          } else {
+            // gather the pertinent bits and return
+            let sessionDeets = {
+              sessionID: body,
+              code: accessCode,
+              name: name
+            }
+            resolve(sessionDeets);
           }
         })
       }

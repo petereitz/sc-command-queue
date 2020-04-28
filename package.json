@@ -9,7 +9,7 @@
   "author": "petereitz",
   "license": "MIT",
   "dependencies": {
-    "request": "^2.88.0"
+    "request": "^2.88.2"
   },
   "repository": {
     "type": "git",
