@@ -145,7 +145,7 @@ Queue.prototype.command = function (sessions, command, opts = {group: api.defaul
 }
 
 // Create a session
-Queue.prototype.createSession = function (type, name) {
+Queue.prototype.createSession = function (type, name, accessCode = false) {
   return new Promise((resolve, reject)=>{
 
     // don't loose yourself
@@ -173,10 +173,12 @@ Queue.prototype.createSession = function (type, name) {
         }
         // the name
         deets.push(name);
-        // this is a public session
-        deets.push(true);
+        // this is a coded session
+        deets.push(false);
         // we need an access code
-        let accessCode = Math.floor(Math.random()*90000) + 10000;
+        if(!accessCode){
+          var accessCode = Math.floor(Math.random()*90000) + 10000;
+        }
         deets.push(`${accessCode}`);
         // and we never have opts to add
         deets.push(null);
