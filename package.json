@@ -1,6 +1,6 @@
 {
   "name": "sc-command-queue",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Queue command events Connectwise Control (Screenconnect) guest systems.",
   "main": "index.js",
   "scripts": {

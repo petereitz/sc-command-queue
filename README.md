@@ -38,6 +38,10 @@ Once required, connect to a Screen Connect server using the `connect()` method. 
     - **group** -  `string`: the group that the guest belongs to.  Defaults to "All Machines".
 
 ## Changes
+- **v1.2.1**
+  - Change createSession() to build coded (private) sessions
+  - Change createSession() to use a submitted join code
+  
 - **v1.2.0**
   - Add `createSession` method
 
