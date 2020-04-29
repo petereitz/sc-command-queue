@@ -177,7 +177,7 @@ Queue.prototype.createSession = function (type, name, accessCode = false) {
         deets.push(false);
         // we need an access code
         if(!accessCode){
-          var accessCode = Math.floor(Math.random()*90000) + 10000;
+          accessCode = Math.floor(Math.random()*90000) + 10000;
         }
         deets.push(`${accessCode}`);
         // and we never have opts to add
