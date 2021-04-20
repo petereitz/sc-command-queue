@@ -1,7 +1,14 @@
  // index.js
 
 // ---SETUP---
-const request = require('request');
+// requests
+//const request = require('request');
+const axios = require('axios');
+
+// html wrangling
+const jsdom = require("jsdom");
+const { JSDOM } = jsdom;
+
 
 // api details
 const api = {
@@ -42,17 +49,60 @@ Queue.prototype.connect = function (urlBase, user, key) {
 
       // save the user
       if (user){
-        self.conn.user = user;
+        self.conn.username = user;
       } else {
         reject("connect() expects user with call")
       }
 
       // save the key
       if (key){
-        self.conn.key = key;
+        self.conn.password = key;
       } else {
         reject("connect() expects key with call")
       }
+
+      // fetch our anti-forgery-token
+      let opts = {
+        method: "GET",
+        url: self.conn.urlBase
+      }
+      axios(opts)
+        .then(res => {
+          // dig it out with your fingernails
+          let r = /"antiForgeryToken":"[\/\+\=A-z0-9]+"/;
+          self.headers = {'X-Anti-Forgery-Token': res.data.match(r)[0].split(":")[1].replace(/"/g, '');
+        })
+        .then(() => {
+          // test connectivity to the api
+          let opts = {
+            auth: self.conn,
+            method: "GET",
+            url: self.conn.apiUpTestPath
+          }
+          return axios(opts);
+        })
+        .then(res => {
+          // note when we did this
+          self.conn.lastConn = Date.now();
+
+          // set connected to true
+          self.conn.state = true;
+
+          // resolve
+          resolve(`${res.data.info.title}:${res.data.info.version}`);          
+
+        })
+        .catch(err => reject(err))
+      
+      /*
+      
+      //
+      let opts = {
+        auth: self.conn,
+        method: "GET",
+        url: self.conn.apiUpTestPath
+      }
+
 
       // test connectivity to the api
       request.get(self.conn.apiUpTestPath, {
@@ -82,6 +132,7 @@ Queue.prototype.connect = function (urlBase, user, key) {
           }
         }
       });
+      */
 
     } catch(err) {
       reject(err);
