@@ -247,5 +247,27 @@ Queue.prototype.createSession = function (type, name, accessCode = false) {
 }
 
 
+
 // ---EXPORT---
 module.exports = new Queue();
+
+
+// ---TIMERS---
+// refresh before af token/cookie expires
+setInterval(() => {
+
+  // does our refresh timer expire in the next 2 minutes?
+  if((module.exports.antiForgery.expire - 120000) < Date.now()){
+    // mark the connection as not ready
+    delete module.exports.conn.state;
+    // flush the old af settings
+    delete module.exports.antiForgery;
+    delete module.exports.headers;
+    // reconnect
+    let deets = module.exports.conn;
+    module.exports.connect(deets.urlBase, deets.auth.username, deets.auth.password)
+      //.then(data => console.log(data))
+      .catch(err => {throw new Error(err)})
+
+  }
+}, 60000)
