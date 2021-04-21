@@ -38,6 +38,10 @@ Once required, connect to a Screen Connect server using the `connect()` method. 
     - **group** -  `string`: the group that the guest belongs to.  Defaults to "All Machines".
 
 ## Changes
+- **v1.2.3**
+  - Begin replacing request with axios
+  - Work with CSRF anti-forgery-token requirements beginning in SC 2020.11
+
 - **v1.2.2**
   - Clean up accesCode eval bug
 
