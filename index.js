@@ -2,7 +2,7 @@
 
 // ---SETUP---
 // requests
-//const request = require('request');
+const request = require('request');
 const axios = require('axios');
 
 // api details
@@ -19,11 +19,13 @@ const api = {
 // the object
 function Queue() {
   // connection details
-  this.conn = {};
+  this.conn = {
+    auth: {}
+  };
 }
 
 // test initial connection to SC API and cache details
-Queue.prototype.connect = function (urlBase, user, key) {
+Queue.prototype.connect = function (urlBase, user, key, refresh=7200 ) {
   return new Promise((resolve, reject)=>{
 
     // don't loose yourself
@@ -44,37 +46,57 @@ Queue.prototype.connect = function (urlBase, user, key) {
 
       // save the user
       if (user){
-        self.conn.username = user;
+        self.conn.auth.username = user;
       } else {
         reject("connect() expects user with call")
       }
 
       // save the key
       if (key){
-        self.conn.password = key;
+        self.conn.auth.password = key;
       } else {
         reject("connect() expects key with call")
       }
 
       // fetch our anti-forgery-token
       let requestOpts = {
+        auth: self.conn.auth,
         method: "GET",
-        url: self.conn.urlBase
+        url: self.conn.urlBase,
+        withCredentials: true
       }
       axios(requestOpts)
         .then(res => {
-          // t
-          console.log(res.data)
 
-          // dig it out with your fingernails
+          // dig the anti forgery token and cookie out with your fingernails
           let r = /"antiForgeryToken":"[\/\+\=A-z0-9]+"/;
-          self.headers = {'X-Anti-Forgery-Token': res.data.match(r)[0].split(":")[1].replace(/"/g, '')}
-          console.log(self.headers)
+          self.antiForgery = {
+            token: res.data.match(r)[0].split(":")[1].replace(/"/g, ''),
+            cookie: res.headers['set-cookie'][0].split("; ")
+          }
+          // plan to rework all of this at some point
+          self.antiForgery.cookie.forEach(deet => {
+            let parts = deet.split("=");
+            if (parts[0] == "expires"){
+              let expire = Date.parse(parts[1]);
+              let refresTimer = Date.now() + (refresh * 1000);
+              if (expire < refresTimer){
+                self.antiForgery.expire = expire;
+              } else {
+                self.antiForgery.expire = refresTimer;
+              }
+            }
+          });
+          // set the headers
+          self.headers = {
+            'X-Anti-Forgery-Token': self.antiForgery.token,
+            'Cookie': self.antiForgery.cookie[0]
+          }
         })
         .then(() => {
           // test connectivity to the api
           let requestOpts = {
-            auth: self.conn,
+            auth: self.conn.auth,
             method: "GET",
             url: self.conn.apiUpTestPath
           }
@@ -92,46 +114,6 @@ Queue.prototype.connect = function (urlBase, user, key) {
 
         })
         .catch(err => reject(err))
-      
-      /*
-      
-      //
-      let opts = {
-        auth: self.conn,
-        method: "GET",
-        url: self.conn.apiUpTestPath
-      }
-
-
-      // test connectivity to the api
-      request.get(self.conn.apiUpTestPath, {
-        'auth': {
-          'user': self.conn.user,
-          'pass': self.conn.key,
-          'sendImmediately': false
-        }
-      }, function(err, res, body){
-        if (err) {
-          reject(err);
-        } else {
-
-          // did we get a valid response
-          if (res.statusCode == 200){
-            // convert the body
-            body = JSON.parse(body);
-
-            // note when we did this
-            self.conn.lastConn = Date.now();
-
-            // set connected to true
-            self.conn.state = true;
-
-            // resolve
-            resolve(`${body.info.title}:${body.info.version}`);
-          }
-        }
-      });
-      */
 
     } catch(err) {
       reject(err);
@@ -173,7 +155,7 @@ Queue.prototype.command = function (sessions, command, opts = {group: api.defaul
 
         // POST the reqeust
         let requestOpts = {
-          auth: self.conn,
+          auth: self.conn.auth,
           url: url,
           method: "POST",
           headers: self.headers,
@@ -181,28 +163,10 @@ Queue.prototype.command = function (sessions, command, opts = {group: api.defaul
         }
         axios(requestOpts)
         .then(res => {
-          resolve({status: "success", message: res.dat});
+          resolve({status: "success", message: res.data});
         })
         .catch(err => reject(err));
 
-        /*
-        request.post(url, {
-          'auth': {
-            'user': self.conn.user,
-            'pass': self.conn.key,
-            'sendImmediately': false
-          },
-          json: payload
-        }, function(err, res, body){
-          if (err){
-            reject(err);
-          } else if (res.statusCode != 200){
-            reject(`Error: ${JSON.stringify(body)}`)
-          } else {
-            resolve({status: "success", message: body});
-          }
-        })
-        */
       }
     } catch(err) {
       reject(err);
@@ -255,8 +219,8 @@ Queue.prototype.createSession = function (type, name, accessCode = false) {
         // POST the reqeust
         request.post(url, {
           'auth': {
-            'user': self.conn.user,
-            'pass': self.conn.key,
+            'user': self.conn.auth.user,
+            'pass': self.conn.auth.key,
             'sendImmediately': false
           },
           json: deets
