@@ -5,11 +5,6 @@
 //const request = require('request');
 const axios = require('axios');
 
-// html wrangling
-const jsdom = require("jsdom");
-const { JSDOM } = jsdom;
-
-
 // api details
 const api = {
   defaultGroup: "All Machines",
@@ -62,24 +57,28 @@ Queue.prototype.connect = function (urlBase, user, key) {
       }
 
       // fetch our anti-forgery-token
-      let opts = {
+      let requestOpts = {
         method: "GET",
         url: self.conn.urlBase
       }
-      axios(opts)
+      axios(requestOpts)
         .then(res => {
+          // t
+          console.log(res.data)
+
           // dig it out with your fingernails
           let r = /"antiForgeryToken":"[\/\+\=A-z0-9]+"/;
-          self.headers = {'X-Anti-Forgery-Token': res.data.match(r)[0].split(":")[1].replace(/"/g, '');
+          self.headers = {'X-Anti-Forgery-Token': res.data.match(r)[0].split(":")[1].replace(/"/g, '')}
+          console.log(self.headers)
         })
         .then(() => {
           // test connectivity to the api
-          let opts = {
+          let requestOpts = {
             auth: self.conn,
             method: "GET",
             url: self.conn.apiUpTestPath
           }
-          return axios(opts);
+          return axios(requestOpts);
         })
         .then(res => {
           // note when we did this
@@ -171,7 +170,22 @@ Queue.prototype.command = function (sessions, command, opts = {group: api.defaul
         // build the payload
         let payload = [opts.group, sessions, 44, command]
 
+
         // POST the reqeust
+        let requestOpts = {
+          auth: self.conn,
+          url: url,
+          method: "POST",
+          headers: self.headers,
+          data: payload
+        }
+        axios(requestOpts)
+        .then(res => {
+          resolve({status: "success", message: res.dat});
+        })
+        .catch(err => reject(err));
+
+        /*
         request.post(url, {
           'auth': {
             'user': self.conn.user,
@@ -188,6 +202,7 @@ Queue.prototype.command = function (sessions, command, opts = {group: api.defaul
             resolve({status: "success", message: body});
           }
         })
+        */
       }
     } catch(err) {
       reject(err);
